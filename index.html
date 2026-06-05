@@ -270,7 +270,7 @@ tr:hover .row-actions{opacity:1;}
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────
-const CLIENT_ID  = '18788fe0-90e8-4c79-8813-9f96ee80b6ab';
+const CLIENT_ID  = '1b941d11-0a2e-4788-9822-ae63b7fb0f7c';
 const TENANT_ID  = 'f300c84f-87f0-4d9e-8284-1e36dbe06fbe';
 const SP_SITE    = 'https://achemosgrupelt.sharepoint.com/sites/MBL';
 const LIST_NAME  = 'Užsakymai';     // ← your orders list name
@@ -288,7 +288,7 @@ const msalInstance = new msal.PublicClientApplication({
   auth: {
     clientId: CLIENT_ID,
     authority: `https://login.microsoftonline.com/${TENANT_ID}`,
-    redirectUri: window.location.href.split('?')[0]
+    redirectUri: 'https://vkmitas.github.io/dokumentacija/'
   },
   cache: { cacheLocation: 'sessionStorage' }
 });
