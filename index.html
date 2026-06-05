@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Užsakymų valdymas – UAB Iremas</title>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:#0f1923; --ink-mid:#1e2d3d; --steel:#4a6278; --mist:#8fa3b3;
+  --border:#d4dde6; --border-light:#e8eef3;
+  --bg:#f0f3f6; --surface:#fff; --surface-2:#f7f9fb;
+  --accent:#1a6edb; --accent-dim:#dbeafe; --accent-mid:#2563eb;
+  --green:#15803d; --green-dim:#dcfce7;
+  --amber:#92400e; --amber-dim:#fef3c7;
+  --red:#b91c1c; --red-dim:#fee2e2;
+  --violet:#5b21b6; --violet-dim:#ede9fe;
+  --r:5px; --font:'DM Sans',system-ui,sans-serif; --mono:'DM Mono',monospace;
+  --sh:0 1px 3px rgba(15,25,35,.07),0 1px 2px rgba(15,25,35,.05);
+  --sh-lg:0 12px 40px rgba(15,25,35,.14),0 4px 12px rgba(15,25,35,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:100vh;font-size:14px;-webkit-font-smoothing:antialiased;}
+
+/* LOGIN */
+.login-overlay{position:fixed;inset:0;background:var(--ink);z-index:999;display:flex;align-items:center;justify-content:center;}
+.login-overlay.hidden{display:none;}
+.login-card{background:var(--surface);border-radius:12px;padding:44px 48px 40px;text-align:center;width:360px;box-shadow:var(--sh-lg);}
+.login-logo{width:52px;height:52px;background:var(--ink);border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-family:var(--mono);font-size:13px;font-weight:500;color:#fff;}
+.login-card h2{font-size:19px;font-weight:600;margin-bottom:6px;letter-spacing:-.02em;}
+.login-card p{font-size:13px;color:var(--steel);margin-bottom:28px;line-height:1.6;}
+.login-brand{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:36px;}
+.btn-ms{display:flex;align-items:center;justify-content:center;gap:10px;background:#0078d4;color:#fff;border:none;border-radius:var(--r);padding:12px 20px;font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;width:100%;transition:background .15s;}
+.btn-ms:hover{background:#006cbd;}
+.login-err{margin-top:12px;font-size:12px;color:var(--red);min-height:16px;}
+
+/* HEADER */
+.header{background:var(--ink);position:sticky;top:0;z-index:100;}
+.header-inner{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-badge{width:28px;height:28px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:500;color:#fff;}
+.logo-name{font-size:13px;font-weight:600;color:#fff;}
+.logo-sub{font-size:10px;color:rgba(255,255,255,.35);font-family:var(--mono);letter-spacing:.05em;}
+.user-area{display:flex;align-items:center;gap:8px;}
+.user-av{width:26px;height:26px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+.user-name{font-size:12px;color:rgba(255,255,255,.7);}
+.btn-logout{background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:13px;padding:4px;transition:color .15s;}
+.btn-logout:hover{color:rgba(255,255,255,.7);}
+
+/* TOOLBAR */
+.toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.toolbar-title{font-size:15px;font-weight:600;letter-spacing:-.02em;margin-right:4px;}
+.toolbar-count{font-family:var(--mono);font-size:11px;color:var(--mist);margin-right:auto;}
+.search-box{position:relative;}
+.search-box input{font-family:var(--font);font-size:12px;padding:6px 10px 6px 28px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface-2);width:200px;color:var(--ink);transition:all .15s;}
+.search-box input:focus{outline:none;border-color:var(--accent);width:240px;}
+.search-ic{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--mist);pointer-events:none;}
+select.filter-sel{font-family:var(--font);font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface-2);color:var(--ink);cursor:pointer;}
+select.filter-sel:focus{outline:none;border-color:var(--accent);}
+.btn-sm{font-family:var(--font);font-size:11px;font-weight:600;padding:6px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);color:var(--steel);cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.btn-sm.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-sm.primary:hover{background:var(--accent-mid);border-color:var(--accent-mid);}
+
+/* TABLE */
+.table-wrap{padding:16px 24px;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:var(--sh);}
+thead{background:var(--surface-2);}
+th{font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.08em;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);font-family:var(--mono);white-space:nowrap;cursor:pointer;user-select:none;}
+th:hover{color:var(--ink);}
+th.sort-asc::after{content:' ↑';}
+th.sort-desc::after{content:' ↓';}
+td{padding:10px 14px;border-bottom:1px solid var(--border-light);font-size:13px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface-2);}
+tr.selected td{background:var(--accent-dim);}
+.td-mono{font-family:var(--mono);font-size:12px;}
+.td-desc{max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.td-cust{max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--steel);}
+
+/* BADGES */
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;font-family:var(--mono);letter-spacing:.02em;}
+.badge-new{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
+.badge-assigned{background:var(--accent-dim);color:var(--accent-mid);border:1px solid #bfdbfe;}
+.badge-done{background:var(--green-dim);color:var(--green);border:1px solid #bbf7d0;}
+.badge-pending{background:var(--amber-dim);color:var(--amber);border:1px solid #fde68a;}
+.badge-doc{background:var(--red-dim);color:var(--red);border:1px solid #fecaca;}
+.badge-nodoc{background:var(--surface-2);color:var(--mist);border:1px solid var(--border);}
+
+/* ROW ACTIONS */
+.row-actions{display:flex;gap:5px;align-items:center;opacity:0;transition:opacity .15s;}
+tr:hover .row-actions{opacity:1;}
+.row-btn{font-family:var(--font);font-size:11px;font-weight:600;padding:4px 10px;border-radius:var(--r);border:none;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.row-btn-assign{background:var(--accent);color:#fff;}
+.row-btn-assign:hover{background:var(--accent-mid);}
+.row-btn-status{background:transparent;border:1px solid var(--border);color:var(--steel);}
+.row-btn-status:hover{border-color:var(--accent);color:var(--accent);}
+
+/* LOADING / EMPTY */
+.loading{text-align:center;padding:60px;color:var(--mist);}
+.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty{text-align:center;padding:60px;color:var(--mist);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,25,35,.5);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--surface);border-radius:10px;width:100%;max-width:440px;box-shadow:var(--sh-lg);overflow:hidden;}
+.modal-head{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-size:15px;font-weight:600;letter-spacing:-.02em;}
+.modal-close{background:none;border:none;color:var(--mist);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px;border-radius:var(--r);transition:all .15s;}
+.modal-close:hover{background:var(--border-light);color:var(--ink);}
+.modal-body{padding:20px 24px;}
+.modal-order{font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:4px;}
+.modal-desc{font-size:13px;font-weight:500;color:var(--ink);margin-bottom:4px;line-height:1.4;}
+.modal-cust{font-size:12px;color:var(--steel);margin-bottom:16px;}
+.field-label{font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-family:var(--mono);}
+.field-wrap{margin-bottom:14px;}
+.field-select{font-family:var(--font);font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);width:100%;color:var(--ink);background:var(--surface);transition:border-color .15s;}
+.field-select:focus{outline:none;border-color:var(--accent);}
+.field-input{font-family:var(--font);font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);width:100%;color:var(--ink);transition:border-color .15s;}
+.field-input:focus{outline:none;border-color:var(--accent);}
+.modal-foot{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.btn-cancel{font-family:var(--font);font-size:13px;font-weight:500;padding:8px 16px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--steel);cursor:pointer;transition:all .15s;}
+.btn-cancel:hover{border-color:var(--ink);color:var(--ink);}
+.btn-confirm{font-family:var(--font);font-size:13px;font-weight:600;padding:8px 18px;border-radius:var(--r);border:none;background:var(--accent);color:#fff;cursor:pointer;transition:background .15s;}
+.btn-confirm:hover{background:var(--accent-mid);}
+.btn-confirm.green{background:var(--green);}
+.btn-confirm.green:hover{background:#166534;}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:7px;font-size:13px;font-weight:500;color:#fff;z-index:999;opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:none;box-shadow:var(--sh-lg);}
+.toast.show{opacity:1;transform:none;}
+.toast.success{background:var(--green);}
+.toast.error{background:var(--red);}
+.toast.info{background:var(--accent);}
+
+/* PAGINATION */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:var(--surface);border-top:1px solid var(--border);font-size:12px;color:var(--steel);}
+.page-btns{display:flex;gap:4px;}
+.page-btn{font-family:var(--mono);font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--r);background:transparent;color:var(--steel);cursor:pointer;transition:all .15s;}
+.page-btn:hover{border-color:var(--accent);color:var(--accent);}
+.page-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.page-btn:disabled{opacity:.4;cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="loginOverlay">
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <div class="login-brand">UAB Iremas · Užsakymų sistema</div>
+    <div class="login-card">
+      <div class="login-logo">MBL</div>
+      <h2>Prisijungti</h2>
+      <p>Naudokite savo Iremas Microsoft paskyrą prisijungimui.</p>
+      <button class="btn-ms" onclick="signIn()">
+        <svg width="18" height="18" viewBox="0 0 21 21" fill="none">
+          <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+          <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+          <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+          <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+        </svg>
+        Prisijungti su Microsoft
+      </button>
+      <div class="login-err" id="loginErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-badge">MBL</div>
+      <div>
+        <div class="logo-name">UAB Iremas</div>
+        <div class="logo-sub">Užsakymų valdymas</div>
+      </div>
+    </div>
+    <div class="user-area">
+      <div class="user-av" id="userAv">?</div>
+      <span class="user-name" id="userName"></span>
+      <button class="btn-logout" onclick="signOut()" title="Atsijungti">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <span class="toolbar-title">Užsakymai</span>
+  <span class="toolbar-count" id="rowCount">—</span>
+
+  <div class="search-box">
+    <span class="search-ic">🔍</span>
+    <input type="text" id="searchInput" placeholder="Ieškoti užs. nr., užsakovo..." oninput="applyFilters()">
+  </div>
+
+  <select class="filter-sel" id="filterStatus" onchange="applyFilters()">
+    <option value="">Visi statusai</option>
+    <option value="Naujas">Naujas</option>
+    <option value="Priskirtas">Priskirtas</option>
+    <option value="Vykdoma">Vykdoma</option>
+    <option value="Atlikta">Atlikta</option>
+  </select>
+
+  <select class="filter-sel" id="filterCustomer" onchange="applyFilters()">
+    <option value="">Visi užsakovai</option>
+  </select>
+
+  <select class="filter-sel" id="filterDoc" onchange="applyFilters()">
+    <option value="">Dokumentacija</option>
+    <option value="Reikia DOK">Reikia DOK</option>
+    <option value="Nereikia DOK">Nereikia DOK</option>
+  </select>
+
+  <button class="btn-sm" onclick="loadData()">↻ Atnaujinti</button>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+  <div id="tableContainer">
+    <div class="loading"><div class="spinner"></div>Jungiamasi...</div>
+  </div>
+</div>
+
+<!-- ASSIGN MODAL -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Priskirti / Keisti statusą</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-order" id="modalOrderNo"></div>
+      <div class="modal-desc" id="modalDesc"></div>
+      <div class="modal-cust" id="modalCust"></div>
+
+      <div class="field-wrap">
+        <div class="field-label">Priskirtas asmuo</div>
+        <select class="field-select" id="modalAssignee">
+          <option value="">— Nepriskirta —</option>
+        </select>
+      </div>
+
+      <div class="field-wrap">
+        <div class="field-label">Statusas</div>
+        <select class="field-select" id="modalStatus">
+          <option value="Naujas">Naujas</option>
+          <option value="Priskirtas">Priskirtas</option>
+          <option value="Vykdoma">Vykdoma</option>
+          <option value="Atlikta">Atlikta</option>
+        </select>
+      </div>
+
+      <div class="field-wrap">
+        <div class="field-label">Pastaba</div>
+        <input type="text" class="field-input" id="modalNote" placeholder="Neprivaloma...">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModal()">Atšaukti</button>
+      <button class="btn-confirm" onclick="saveAssignment()">✓ Išsaugoti</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────
+const CLIENT_ID  = '18788fe0-90e8-4c79-8813-9f96ee80b6ab';
+const TENANT_ID  = 'f300c84f-87f0-4d9e-8284-1e36dbe06fbe';
+const SP_SITE    = 'https://achemosgrupelt.sharepoint.com/sites/MBL';
+const LIST_NAME  = 'Užsakymai';     // ← your orders list name
+const USERS_LIST = 'Engineers';     // ← your users list name
+const SCOPES     = [
+  'User.Read',
+  'https://achemosgrupelt.sharepoint.com/AllSites.Read',
+  'https://achemosgrupelt.sharepoint.com/AllSites.Write'
+];
+
+const PAGE_SIZE = 50;
+
+// ── MSAL ─────────────────────────────────────────────────
+const msalInstance = new msal.PublicClientApplication({
+  auth: {
+    clientId: CLIENT_ID,
+    authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+    redirectUri: window.location.href.split('?')[0]
+  },
+  cache: { cacheLocation: 'sessionStorage' }
+});
+
+let currentUser = null;
+let spToken = null;
+let allItems = [];
+let filtered = [];
+let users = [];
+let currentPage = 1;
+let sortCol = 'field_2';
+let sortDir = 'asc';
+let editingId = null;
+
+// ── AUTH ─────────────────────────────────────────────────
+async function initAuth() {
+  await msalInstance.initialize();
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length > 0) {
+    currentUser = accounts[0];
+    setUserUI();
+    await loadData();
+  }
+}
+
+async function signIn() {
+  try {
+    document.getElementById('loginErr').textContent = '';
+    const resp = await msalInstance.loginPopup({ scopes: SCOPES });
+    currentUser = resp.account;
+    setUserUI();
+    await loadData();
+  } catch(e) {
+    document.getElementById('loginErr').textContent = 'Prisijungimas nepavyko. Bandykite dar kartą.';
+    console.error(e);
+  }
+}
+
+function signOut() {
+  msalInstance.logoutPopup();
+  currentUser = null;
+  document.getElementById('loginOverlay').classList.remove('hidden');
+}
+
+function setUserUI() {
+  document.getElementById('loginOverlay').classList.add('hidden');
+  const initials = (currentUser.name||'?').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+  document.getElementById('userAv').textContent = initials;
+  document.getElementById('userName').textContent = currentUser.name;
+}
+
+async function getToken() {
+  try {
+    const r = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: currentUser });
+    return r.accessToken;
+  } catch {
+    const r = await msalInstance.acquireTokenPopup({ scopes: SCOPES, account: currentUser });
+    return r.accessToken;
+  }
+}
+
+// ── SHAREPOINT ────────────────────────────────────────────
+async function spGet(url) {
+  const token = await getToken();
+  const resp = await fetch(url, {
+    headers: { Authorization: 'Bearer ' + token, Accept: 'application/json;odata=verbose' }
+  });
+  if (!resp.ok) throw new Error(`SP error ${resp.status}: ${await resp.text()}`);
+  return (await resp.json()).d;
+}
+
+async function spPatch(url, body) {
+  const token = await getToken();
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + token,
+      Accept: 'application/json;odata=verbose',
+      'Content-Type': 'application/json;odata=verbose',
+      'X-HTTP-Method': 'MERGE',
+      'IF-MATCH': '*'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok && resp.status !== 204) throw new Error(`SP PATCH error ${resp.status}`);
+}
+
+// ── LOAD DATA ─────────────────────────────────────────────
+async function loadData() {
+  document.getElementById('tableContainer').innerHTML = '<div class="loading"><div class="spinner"></div>Kraunama...</div>';
+  try {
+    // Load users
+    const usersData = await spGet(`${SP_SITE}/_api/web/lists/getbytitle('${USERS_LIST}')/items?$top=200&$select=Id,Title,field_1`);
+    users = (usersData.results || []).map(u => ({ id: u.Id, name: u.Title, email: u.field_1 || '' }));
+
+    // Populate assignee dropdown
+    const sel = document.getElementById('modalAssignee');
+    sel.innerHTML = '<option value="">— Nepriskirta —</option>';
+    users.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.name;
+      opt.textContent = u.name;
+      sel.appendChild(opt);
+    });
+
+    // Load all orders (paginate through)
+    allItems = [];
+    let nextUrl = `${SP_SITE}/_api/web/lists/getbytitle('${LIST_NAME}')/items?$top=500&$select=Id,Title,field_1,field_2,field_3,field_4,field_5,field_6,field_7,field_8,field_9,field_10,AssignedTo,Status,Note`;
+    while (nextUrl) {
+      const data = await spGet(nextUrl);
+      allItems = allItems.concat(data.results || []);
+      nextUrl = data.__next || null;
+    }
+
+    // Populate customer filter
+    const customers = [...new Set(allItems.map(i => i.field_3).filter(Boolean))].sort();
+    const custSel = document.getElementById('filterCustomer');
+    custSel.innerHTML = '<option value="">Visi užsakovai</option>';
+    customers.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      custSel.appendChild(opt);
+    });
+
+    applyFilters();
+    showToast(`✓ Įkelta ${allItems.length} užsakymų`, 'success');
+  } catch(e) {
+    document.getElementById('tableContainer').innerHTML = `<div class="empty">⚠ Klaida: ${e.message}</div>`;
+    showToast('Klaida kraunant duomenis', 'error');
+    console.error(e);
+  }
+}
+
+// ── FILTERS + SORT ────────────────────────────────────────
+function applyFilters() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('filterStatus').value;
+  const customer = document.getElementById('filterCustomer').value;
+  const doc = document.getElementById('filterDoc').value;
+
+  filtered = allItems.filter(item => {
+    const matchSearch = !search ||
+      (item.field_1||'').toLowerCase().includes(search) ||
+      (item.field_3||'').toLowerCase().includes(search) ||
+      (item.field_4||'').toLowerCase().includes(search) ||
+      (item.Title||'').toLowerCase().includes(search);
+    const matchStatus = !status || (item.Status||'Naujas') === status;
+    const matchCustomer = !customer || item.field_3 === customer;
+    const matchDoc = !doc || item.field_7 === doc;
+    return matchSearch && matchStatus && matchCustomer && matchDoc;
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    let av = a[sortCol] || '', bv = b[sortCol] || '';
+    if (sortDir === 'desc') [av, bv] = [bv, av];
+    return String(av).localeCompare(String(bv), 'lt');
+  });
+
+  document.getElementById('rowCount').textContent = `${filtered.length} įrašai`;
+  currentPage = 1;
+  renderTable();
+}
+
+function setSort(col) {
+  if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  else { sortCol = col; sortDir = 'asc'; }
+  applyFilters();
+}
+
+// ── RENDER TABLE ──────────────────────────────────────────
+function renderTable() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = filtered.slice(start, start + PAGE_SIZE);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+
+  if (!page.length) {
+    document.getElementById('tableContainer').innerHTML = '<div class="empty">📭 Nėra įrašų pagal pasirinktus filtrus.</div>';
+    return;
+  }
+
+  const th = (col, label) => {
+    const cls = sortCol === col ? (sortDir === 'asc' ? 'sort-asc' : 'sort-desc') : '';
+    return `<th class="${cls}" onclick="setSort('${col}')">${label}</th>`;
+  };
+
+  const rows = page.map(item => {
+    const status = item.Status || 'Naujas';
+    const badgeCls = { Naujas:'badge-new', Priskirtas:'badge-assigned', Vykdoma:'badge-pending', Atlikta:'badge-done' }[status] || 'badge-new';
+    const docCls = item.field_7 === 'Reikia DOK' ? 'badge-doc' : 'badge-nodoc';
+    const date1 = formatDate(item.field_2);
+    const date2 = formatDate(item.field_5);
+    const date3 = formatDate(item.field_9);
+    const assignedTo = item.AssignedTo || '';
+    const note = item.Note || '';
+
+    return `<tr>
+      <td class="td-mono" style="color:var(--accent);font-size:11px;">${esc(item.field_1||'')}</td>
+      <td class="td-mono" style="font-size:11px;color:var(--steel);">${esc(item.Title||'')}</td>
+      <td class="td-cust">${esc(item.field_3||'')}</td>
+      <td class="td-desc">${esc(item.field_4||'')}</td>
+      <td class="td-mono" style="font-size:11px;">${date1}</td>
+      <td class="td-mono" style="font-size:11px;">${date2}</td>
+      <td class="td-mono" style="font-size:11px;color:${date3?'var(--accent)':'var(--mist)'};">${date3||'—'}</td>
+      <td>${item.field_7 ? `<span class="badge ${docCls}">${esc(item.field_7)}</span>` : '—'}</td>
+      <td style="font-size:12px;color:var(--steel);">${esc(assignedTo)||'<span style="color:var(--mist)">—</span>'}</td>
+      <td><span class="badge ${badgeCls}">${status}</span></td>
+      <td style="font-size:11px;color:var(--mist);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(note)}</td>
+      <td>
+        <div class="row-actions">
+          <button class="row-btn row-btn-assign" onclick="openModal(${item.Id})">Priskirti</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const sortIcon = col => sortCol === col ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '';
+
+  document.getElementById('tableContainer').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          ${th('field_1','Užs. Nr.')}
+          ${th('Title','Projektas')}
+          ${th('field_3','Užsakovas')}
+          ${th('field_4','Turinys')}
+          ${th('field_2','Reg. data')}
+          ${th('field_5','Terminas')}
+          ${th('field_9','Atkrovimo data')}
+          ${th('field_7','Dokumentacija')}
+          <th>Priskirtas</th>
+          <th>Statusas</th>
+          <th>Pastaba</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="pagination">
+      <span>${start+1}–${Math.min(start+PAGE_SIZE, filtered.length)} iš ${filtered.length}</span>
+      <div class="page-btns">
+        <button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>← Atgal</button>
+        ${Array.from({length:Math.min(totalPages,7)},(_,i)=>{
+          const p = totalPages <= 7 ? i+1 : (currentPage <= 4 ? i+1 : currentPage-3+i);
+          if(p<1||p>totalPages) return '';
+          return `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+        }).join('')}
+        <button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>Toliau →</button>
+      </div>
+    </div>`;
+}
+
+function goPage(p) {
+  const total = Math.ceil(filtered.length / PAGE_SIZE);
+  if (p < 1 || p > total) return;
+  currentPage = p;
+  renderTable();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── MODAL ─────────────────────────────────────────────────
+function openModal(id) {
+  const item = allItems.find(i => i.Id === id);
+  if (!item) return;
+  editingId = id;
+
+  document.getElementById('modalOrderNo').textContent = item.field_1 || '';
+  document.getElementById('modalDesc').textContent = item.field_4 || '';
+  document.getElementById('modalCust').textContent = item.field_3 || '';
+  document.getElementById('modalAssignee').value = item.AssignedTo || '';
+  document.getElementById('modalStatus').value = item.Status || 'Naujas';
+  document.getElementById('modalNote').value = item.Note || '';
+
+  document.getElementById('assignModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('assignModal').classList.remove('show');
+  editingId = null;
+}
+
+async function saveAssignment() {
+  if (!editingId) return;
+  const assignee = document.getElementById('modalAssignee').value;
+  const status = document.getElementById('modalStatus').value;
+  const note = document.getElementById('modalNote').value;
+
+  showToast('Saugoma...', 'info');
+  try {
+    const listType = await getListItemType();
+    await spPatch(
+      `${SP_SITE}/_api/web/lists/getbytitle('${LIST_NAME}')/items(${editingId})`,
+      {
+        '__metadata': { 'type': listType },
+        'AssignedTo': assignee,
+        'Status': status,
+        'Note': note
+      }
+    );
+
+    // Update local data
+    const item = allItems.find(i => i.Id === editingId);
+    if (item) { item.AssignedTo = assignee; item.Status = status; item.Note = note; }
+
+    closeModal();
+    applyFilters();
+    showToast('✓ Išsaugota', 'success');
+  } catch(e) {
+    showToast('Klaida: ' + e.message, 'error');
+    console.error(e);
+  }
+}
+
+let cachedListType = null;
+async function getListItemType() {
+  if (cachedListType) return cachedListType;
+  const data = await spGet(`${SP_SITE}/_api/web/lists/getbytitle('${LIST_NAME}')?$select=ListItemEntityTypeFullName`);
+  cachedListType = data.ListItemEntityTypeFullName;
+  return cachedListType;
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function formatDate(val) {
+  if (!val) return '';
+  // ISO date string from SharePoint
+  if (typeof val === 'string' && val.includes('T')) return val.substring(0,10);
+  return val;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast '+type+' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── BOOT ─────────────────────────────────────────────────
+initAuth();
+</script>
+</body>
+</html>
