@@ -330,7 +330,7 @@ async function initAuth() {
 async function signIn() {
   try {
     document.getElementById('loginErr').textContent = '';
-    await msalInstance.loginRedirect({ scopes: SCOPES });
+    await msalInstance.loginRedirect({ scopes: SCOPES, prompt: 'consent' });
     // page reloads after redirect — initAuth handles the rest
   } catch(e) {
     document.getElementById('loginErr').textContent = 'Prisijungimas nepavyko. Bandykite dar kartą.';
