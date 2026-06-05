@@ -275,11 +275,12 @@ const TENANT_ID  = 'f300c84f-87f0-4d9e-8284-1e36dbe06fbe';
 const SP_SITE    = 'https://achemosgrupelt.sharepoint.com/sites/TechnikosTarnyba-QA';
 const LIST_NAME  = 'Z17 info';      // ← your orders list name
 const USERS_LIST = 'Vartotojai';    // ← your users list name
-const SCOPES     = [
-  'User.Read',
+const SCOPES_GRAPH = ['User.Read'];
+const SCOPES_SP   = [
   'https://achemosgrupelt.sharepoint.com/AllSites.Read',
   'https://achemosgrupelt.sharepoint.com/AllSites.Write'
 ];
+const SCOPES = [...SCOPES_GRAPH, ...SCOPES_SP];
 
 const PAGE_SIZE = 50;
 
@@ -353,10 +354,10 @@ function setUserUI() {
 
 async function getToken() {
   try {
-    const r = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: currentUser });
+    const r = await msalInstance.acquireTokenSilent({ scopes: SCOPES_SP, account: currentUser });
     return r.accessToken;
   } catch {
-    const r = await msalInstance.acquireTokenPopup({ scopes: SCOPES, account: currentUser });
+    const r = await msalInstance.acquireTokenPopup({ scopes: SCOPES_SP, account: currentUser });
     return r.accessToken;
   }
 }
