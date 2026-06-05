@@ -274,7 +274,7 @@ const CLIENT_ID  = '1b941d11-0a2e-4788-9822-ae63b7fb0f7c';
 const TENANT_ID  = 'f300c84f-87f0-4d9e-8284-1e36dbe06fbe';
 const SP_SITE    = 'https://achemosgrupelt.sharepoint.com/sites/TechnikosTarnyba-QA';
 const LIST_NAME  = 'Z17 info';      // ← your orders list name
-const USERS_LIST = 'Engineers';     // ← your users list name
+const USERS_LIST = 'Vartotojai';    // ← your users list name
 const SCOPES     = [
   'User.Read',
   'https://achemosgrupelt.sharepoint.com/AllSites.Read',
@@ -392,8 +392,8 @@ async function loadData() {
   document.getElementById('tableContainer').innerHTML = '<div class="loading"><div class="spinner"></div>Kraunama...</div>';
   try {
     // Load users
-    const usersData = await spGet(`${SP_SITE}/_api/web/lists/getbytitle('${USERS_LIST}')/items?$top=200&$select=Id,Title,field_1`);
-    users = (usersData.results || []).map(u => ({ id: u.Id, name: u.Title, email: u.field_1 || '' }));
+    const usersData = await spGet(`${SP_SITE}/_api/web/lists/getbytitle('${USERS_LIST}')/items?$top=200&$select=Id,Title,El_pastas,Pareigos,Aktyvus`);
+    users = (usersData.results || []).filter(u => u.Aktyvus !== false).map(u => ({ id: u.Id, name: u.Title, email: u.El_pastas || '', role: u.Pareigos || '' }));
 
     // Populate assignee dropdown
     const sel = document.getElementById('modalAssignee');
@@ -401,7 +401,7 @@ async function loadData() {
     users.forEach(u => {
       const opt = document.createElement('option');
       opt.value = u.name;
-      opt.textContent = u.name;
+      opt.textContent = u.role ? `${u.name} · ${u.role}` : u.name;
       sel.appendChild(opt);
     });
 
@@ -410,7 +410,12 @@ async function loadData() {
     let nextUrl = `${SP_SITE}/_api/web/lists/getbytitle('${LIST_NAME}')/items?$top=500&$select=Id,Title,field_1,field_2,field_3,field_4,field_5,field_6,field_7,field_8,field_9,field_10,AssignedTo,Status,Note`;
     while (nextUrl) {
       const data = await spGet(nextUrl);
-      allItems = allItems.concat(data.results || []);
+      allItems = allItems.concat((data.results || []).map(i => ({
+        ...i,
+        AssignedTo: i.AssignedTo || '',
+        Status: i.Status || 'Naujas',
+        Note: i.Note || ''
+      })));
       nextUrl = data.__next || null;
     }
 
