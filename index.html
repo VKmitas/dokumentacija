@@ -275,6 +275,7 @@ const TENANT_ID  = 'f300c84f-87f0-4d9e-8284-1e36dbe06fbe';
 const SP_SITE    = 'https://achemosgrupelt.sharepoint.com/sites/TechnikosTarnyba-QA';
 const LIST_NAME  = 'Z17 info';      // ← your orders list name
 const USERS_LIST = 'Vartotojai';    // ← your users list name
+const FLOW_F15_URL = 'https://970e788dfa91e4068cfc63a7a3afe7.48.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9dd4b253038346c6ace085b01c8abf90/triggers/manual/paths/invoke?api-version=1';
 const SCOPES_GRAPH = ['User.Read'];
 const SCOPES_SP   = [
   'https://achemosgrupelt.sharepoint.com/AllSites.Read',
@@ -517,6 +518,7 @@ function renderTable() {
       <td>
         <div class="row-actions">
           <button class="row-btn row-btn-assign" onclick="openModal(${item.Id})">Priskirti</button>
+          <button class="row-btn row-btn-status" onclick="triggerF15('${esc(item.field_1||'')}','${esc(item.field_8||'')}')">F-15</button>
         </div>
       </td>
     </tr>`;
@@ -643,6 +645,29 @@ function showToast(msg, type='success') {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast '+type+' show';
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── FLOW TRIGGERS ────────────────────────────────────────
+async function triggerF15(uzs_nr, rmc_uzs_nr) {
+  if (!uzs_nr) { showToast('Nėra užsakymo numerio', 'error'); return; }
+  showToast('Kuriamas F-15 dokumentas...', 'info');
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const resp = await fetch(FLOW_F15_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uzs_nr: uzs_nr,
+        rmc_uzs_nr: rmc_uzs_nr || '',
+        date: today
+      })
+    });
+    if (!resp.ok && resp.status !== 202) throw new Error('Flow error: ' + resp.status);
+    showToast('✓ F-15 sukurtas: ' + uzs_nr, 'success');
+  } catch(e) {
+    showToast('Klaida: ' + e.message, 'error');
+    console.error(e);
+  }
 }
 
 // ── BOOT ─────────────────────────────────────────────────
